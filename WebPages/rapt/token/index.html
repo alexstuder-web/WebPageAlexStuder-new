@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AiBrewGenius · RAPT Bearer</title>
+  <link rel="stylesheet" href="../../../css/styles.css?v=4" />
+  <style>
+    html,body {min-height:100%;overflow:auto;}
+    body {background:#020617;color:#f1f5f9;}
+    .rapt-stack {display:flex;flex-direction:column;gap:20px;}
+    .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
+    .rapt-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .rapt-status {margin-bottom:12px;color:#fbbf24;}
+    .rapt-result {background:#0b1120;border:1px solid rgba(148,163,184,0.35);border-radius:16px;padding:18px;font-size:14px;}
+    details {border:1px solid rgba(148,163,184,0.35);border-radius:12px;padding:16px;background:#0b1120;margin-bottom:12px;}
+    summary {cursor:pointer;font-weight:600;color:#bae6fd;}
+    code {color:#facc15;}
+    .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
+    .btn.ghost:hover {background:rgba(148,163,184,0.1);}
+    .token-copy {margin:12px 0 20px;display:none;flex-direction:column;gap:8px;}
+    .token-copy.active {display:flex;}
+    .token-copy label {font-size:13px;color:#94a3b8;}
+    .token-copy-label-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .token-copy-row {display:flex;gap:8px;flex-wrap:wrap;}
+    .token-copy-row input {flex:1;min-width:220px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#020b1d;padding:12px;color:#f8fafc;font-family:monospace;font-size:13px;}
+    .token-copy-row input:focus {outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
+    .token-copy-feedback {font-size:12px;color:#86efac;min-height:16px;}
+  </style>
+</head>
+<body data-page="rapt">
+  <main class="gpt-shell">
+    <header class="gpt-head">
+      <div class="gpt-badge">Automatisch</div>
+      <h1>Bearer Token Verwaltung</h1>
+      <p>Hier kannst du dir den aktuell serverseitig generierten Bearer Token ansehen oder bei Bedarf aktualisieren.</p>
+    </header>
+
+    <section class="gpt-preview rapt-stack">
+      <div class="rapt-panel">
+        <div class="rapt-actions">
+          <button class="btn primary" id="btn-token">Token aktualisieren</button>
+          <button class="btn ghost" type="button" id="btn-openapi">RAPT OpenAPI</button>
+          <a class="btn" href="../">Zurück zum Dashboard</a>
+        </div>
+        <div class="rapt-status" id="token-status">Noch kein Token geladen.</div>
+        <div class="token-copy" id="token-copy">
+          <div class="token-copy-label-row">
+            <label for="token-value">Access Token</label>
+            <button class="btn ghost" type="button" id="btn-token-copy">Token kopieren</button>
+          </div>
+          <div class="token-copy-row">
+            <input type="text" id="token-value" readonly value="" />
+          </div>
+          <div class="token-copy-feedback" id="token-copy-feedback"></div>
+        </div>
+        <div id="token-data" class="rapt-result">-</div>
+      </div>
+    </section>
+
+    <footer class="gpt-foot">
+      <a class="btn" href="../../../index.html">Zur Startseite</a>
+    </footer>
+  </main>
+
+  <script src="../../../js/api-base.js"></script>
+  <script>
+    const tokenBtn=document.getElementById('btn-token');
+    const tokenStatus=document.getElementById('token-status');
+    const tokenData=document.getElementById('token-data');
+    const tokenCopy=document.getElementById('token-copy');
+    const tokenValueInput=document.getElementById('token-value');
+    const tokenCopyBtn=document.getElementById('btn-token-copy');
+    const tokenCopyFeedback=document.getElementById('token-copy-feedback');
+    const openApiBtn=document.getElementById('btn-openapi');
+
+    tokenBtn.addEventListener('click',()=>loadToken());
+    tokenCopyBtn.addEventListener('click',copyToken);
+    openApiBtn.addEventListener('click',openOpenApiDocs);
+    loadToken();
+
+    async function loadToken(){
+      tokenStatus.textContent='⏳ Token wird abgerufen ...';
+      tokenData.textContent='';
+      setAccessToken('');
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/token'),{method:'POST'});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok){
+          tokenStatus.textContent=`❗ HTTP ${response.status}`;
+          tokenData.textContent=JSON.stringify(data,null,2);
+          return '';
+        }
+        tokenStatus.textContent='✅ Token erfolgreich geladen';
+        const token=extractAccessToken(data);
+        setAccessToken(token);
+        tokenData.innerHTML=`<div class="token-tree-root">${renderNodes(data,'token')}</div>`;
+        return token;
+      }catch(error){
+        tokenStatus.textContent='❗ Token-Abruf fehlgeschlagen';
+        tokenData.textContent=error.message;
+        return '';
+      }
+    }
+
+    function extractAccessToken(node){
+      if(!node || typeof node!=='object') return '';
+      if(typeof node.access_token==='string') return node.access_token;
+      if(typeof node.accessToken==='string') return node.accessToken;
+      if(node.token && typeof node.token==='object') return extractAccessToken(node.token);
+      return '';
+    }
+
+    function setAccessToken(tokenValue){
+      const trimmed=(tokenValue || '').trim();
+      if(trimmed){
+        tokenCopy.classList.add('active');
+        tokenValueInput.value=trimmed;
+        tokenCopyFeedback.textContent='';
+      }else{
+        tokenCopy.classList.remove('active');
+        tokenValueInput.value='';
+        tokenCopyFeedback.textContent='';
+      }
+    }
+
+    async function copyToken(){
+      const value=tokenValueInput.value.trim();
+      if(!value) return;
+      try{
+        await copyText(value);
+        tokenCopyFeedback.textContent='✅ Token in die Zwischenablage kopiert.';
+      }catch(err){
+        tokenCopyFeedback.textContent='❗ Konnte Token nicht kopieren.';
+        return;
+      }
+      setTimeout(()=>tokenCopyFeedback.textContent='',2500);
+    }
+
+    async function openOpenApiDocs(){
+      const previous=openApiBtn.textContent;
+      openApiBtn.disabled=true;
+      openApiBtn.textContent='Token wird geladen...';
+      try{
+        const token=await loadToken();
+        const activeToken=token || tokenValueInput.value.trim();
+        if(!activeToken){
+          tokenStatus.textContent='❗ Konnte keinen Token abrufen.';
+          return;
+        }
+        await copyText(activeToken);
+        tokenStatus.textContent='✅ Token kopiert. API wird geöffnet ...';
+        window.open('https://api.rapt.io/','_blank','noopener');
+      }finally{
+        openApiBtn.disabled=false;
+        openApiBtn.textContent=previous;
+      }
+    }
+
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+      }catch{
+        const temp=document.createElement('textarea');
+        temp.value=text;
+        temp.style.position='fixed';
+        temp.style.opacity='0';
+        document.body.appendChild(temp);
+        try{
+          temp.focus();
+          temp.select();
+          document.execCommand('copy');
+        }finally{
+          document.body.removeChild(temp);
+        }
+      }
+    }
+
+    function renderNodes(node,label='root'){
+      if(Array.isArray(node)){
+        if(!node.length) return `<p><strong>${escapeHtml(label)}</strong>: []</p>`;
+        return node.map((item,idx)=>renderNodes(item,`${label}[${idx}]`)).join('');
+      }
+      if(node && typeof node==='object'){
+        const entries=Object.entries(node).map(([key,val])=>renderNodes(val,key)).join('');
+        return `<details><summary>${escapeHtml(label)}</summary>${entries}</details>`;
+      }
+      return `<p class="token-leaf"><strong>${escapeHtml(label)}</strong>: <code>${escapeHtml(String(node))}</code></p>`;
+    }
+
+    function escapeHtml(str){
+      return str
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+  </script>
+</body>
+</html>
+    .token-tree-root{margin-top:8px;}
+    .token-tree-root details{background:#060b17;border:1px solid rgba(148,163,184,0.2);border-radius:18px;padding:18px;margin:12px 0;}
+    .token-tree-root details summary{font-weight:600;color:#bae6fd;list-style:none;}
+    .token-tree-root details summary::-webkit-details-marker{display:none;}
+    .token-tree-root details summary::before{content:'▸';display:inline-block;margin-right:8px;color:#94a3b8;transition:transform .2s ease;}
+    .token-tree-root details[open] summary::before{transform:rotate(90deg);}
+    .token-tree-root details details{margin:14px 0 0;}
+    .token-leaf{margin:4px 0;font-size:13px;color:#cbd5f5;}

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AiBrewGenius · RAPT Tabelle</title>
+  <link rel="stylesheet" href="../../../css/styles.css?v=4" />
+  <style>
+    body {background:#020617;color:#f1f5f9;}
+    .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
+    .table-actions {display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
+    .table-actions__buttons {display:flex;gap:12px;flex-wrap:wrap;}
+    .start-override-control {flex:1 1 280px;min-width:220px;display:flex;flex-direction:column;gap:6px;}
+    .start-override-control label {font-size:13px;color:#94a3b8;}
+    .start-override-row {display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+    .start-override-field {position:relative;flex:none;min-width:220px;margin-right:24px;}
+    .start-override-input {width:100%;padding:8px 12px;border-radius:10px;border:1px solid rgba(148,163,184,0.4);background:rgba(15,23,42,0.6);color:#f1f5f9;}
+    .start-override-input::-webkit-calendar-picker-indicator {filter:invert(100%);}
+    .start-override-input:focus {outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
+    .rapt-status {margin-bottom:12px;color:#fbbf24;}
+    .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
+    .btn.ghost:hover {background:rgba(148,163,184,0.08);}
+    .table-wrapper {border:1px solid rgba(148,163,184,0.3);border-radius:18px;overflow:auto;max-height:65vh;}
+    table {width:100%;border-collapse:collapse;min-width:640px;}
+    thead {position:sticky;top:0;background:#0b1120;}
+    th,td {padding:14px 16px;border-bottom:1px solid rgba(148,163,184,0.15);text-align:left;}
+    th button {background:none;border:0;color:#e2e8f0;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px;}
+    th button .sort-indicator {font-size:12px;color:#94a3b8;}
+    tbody tr:nth-child(odd) {background:rgba(15,23,42,0.35);}
+    tbody tr:hover {background:rgba(59,130,246,0.12);}
+    td {font-size:14px;color:#cbd5f5;}
+  </style>
+</head>
+<body data-page="rapt">
+  <main class="gpt-shell">
+    <header class="gpt-head">
+      <div class="gpt-badge">Automatisch</div>
+      <h1>Telemetrie als Tabelle</h1>
+      <p>Alle Messwerte in einer sortierbaren Tabelle mit direktem Zugriff auf das Dashboard und CSV-Export.</p>
+    </header>
+
+    <section class="gpt-preview">
+      <div class="rapt-panel">
+        <div class="table-actions">
+          <div class="start-override-control">
+            <label for="table-start-override">Startdatum (optional)</label>
+            <div class="start-override-row" style="flex-wrap:nowrap;flex-basis:100%;">
+              <div class="start-override-field">
+                <input type="datetime-local" id="table-start-override" class="start-override-input" />
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:nowrap;">
+                <button class="btn ghost" type="button" id="btn-table-start-apply">Übernehmen</button>
+              </div>
+            </div>
+            <button class="btn ghost" type="button" id="btn-table-start-clear">Zurücksetzen</button>
+          </div>
+          <div class="table-actions__buttons">
+            <button class="btn primary" id="btn-table-reload">Telemetry laden</button>
+            <button class="btn ghost" id="btn-table-download" disabled>CSV herunterladen</button>
+            <a class="btn" href="../">Zurück zum Dashboard</a>
+          </div>
+        </div>
+        <div class="rapt-status" id="table-status">Noch nicht geladen.</div>
+        <div class="table-wrapper">
+          <table id="telemetry-table">
+            <thead>
+              <tr>
+                <th><button type="button" data-field="startDate">Startdatum <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" data-field="temperature">Temperatur (°C) <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" data-field="gravity">Gravity <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" data-field="gravityVelocity">Gravity Velocity <span class="sort-indicator">↕</span></button></th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="gpt-foot">
+      <a class="btn" href="../../../index.html">Zur Startseite</a>
+    </footer>
+  </main>
+
+  <script src="../../../js/api-base.js"></script>
+  <script>
+    const reloadBtn=document.getElementById('btn-table-reload');
+    const downloadBtn=document.getElementById('btn-table-download');
+    const tableStatus=document.getElementById('table-status');
+    const tableBody=document.querySelector('#telemetry-table tbody');
+    const sortButtons=document.querySelectorAll('th button[data-field]');
+    const startOverrideInput=document.getElementById('table-start-override');
+    const startOverrideApply=document.getElementById('btn-table-start-apply');
+    const startOverrideClear=document.getElementById('btn-table-start-clear');
+    const START_OVERRIDE_STORAGE_KEY='RAPT_START_OVERRIDE';
+    let serverPersistedStart=null;
+
+    let tableRows=[];
+    let currentSort={field:'startDate',direction:'desc'};
+
+    reloadBtn.addEventListener('click',loadTelemetry);
+    downloadBtn.addEventListener('click',downloadCsv);
+    sortButtons.forEach(btn=>btn.addEventListener('click',()=>setSort(btn.dataset.field)));
+
+    initStartOverrideControl();
+    loadTelemetry();
+
+    async function loadTelemetry(){
+      tableStatus.textContent='⏳ Telemetrie wird geladen ...';
+      try{
+        const startOverrideIso=getStartOverrideIso();
+        const response=await fetch(buildTelemetryUrl(startOverrideIso));
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok){
+          tableStatus.textContent=`❗ HTTP ${response.status}`;
+          applyRows([]);
+          return;
+        }
+        const allRows=Array.isArray(data.rows)?data.rows:[];
+        const errorRows=allRows.filter(r=>r?.error);
+        const rows=allRows.filter(r=>!r?.error);
+        if(errorRows.length){
+          console.warn('Gefilterte RAPT-Einträge wegen Fehlern:',errorRows);
+        }
+        const persistedOverride=data.persistedStartDate || null;
+        serverPersistedStart=persistedOverride;
+        syncStartOverrideInput(persistedOverride,startOverrideIso);
+        if(!rows.length){
+          tableStatus.textContent=errorRows.length
+            ? `⚠️ Keine gültigen Telemetriedaten ( ${errorRows.length} ohne Startdatum ).`
+            : 'Keine Telemetriedaten vorhanden.';
+        }else{
+          let status=`✅ ${rows.length} Einträge · Stand ${data.generatedAt || ''}`;
+          if(errorRows.length){
+            status+=` · ${errorRows.length} ohne Startdatum ignoriert`;
+          }
+          if(startOverrideIso || persistedOverride){
+            status+=' · Benutzerstart aktiv';
+          }
+          tableStatus.textContent=status;
+        }
+        applyRows(rows);
+      }catch(error){
+        tableStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
+        applyRows([]);
+      }
+    }
+
+    function applyRows(rows){
+      tableRows=rows;
+      downloadBtn.disabled=!rows.length;
+      renderTable();
+      updateSortIndicators();
+    }
+
+    function setSort(field){
+      if(currentSort.field===field){
+        currentSort.direction=currentSort.direction==='asc'?'desc':'asc';
+      }else{
+        currentSort.field=field;
+        currentSort.direction=field==='startDate'?'desc':'asc';
+      }
+      renderTable();
+      updateSortIndicators();
+    }
+
+    function renderTable(){
+      if(!tableRows.length){
+        tableBody.innerHTML='';
+        return;
+      }
+      const sorted=[...tableRows].sort((a,b)=>compareValues(a,b,currentSort.field,currentSort.direction));
+      tableBody.innerHTML=sorted.map(row=>`
+        <tr>
+          <td>${formatTimestamp(row.startDate)}</td>
+          <td>${formatNumber(row.temperature,'°C')}</td>
+          <td>${formatNumber(row.gravity,'',4)}</td>
+          <td>${formatNumber(row.gravityVelocity)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function compareValues(a,b,field,direction){
+      const aVal=normalizeValue(resolveFieldValue(a,field));
+      const bVal=normalizeValue(resolveFieldValue(b,field));
+      if(aVal === bVal) return 0;
+      const order=aVal > bVal ? 1 : -1;
+      return direction==='asc'?order:-order;
+    }
+
+    function resolveFieldValue(row,field){
+      if(!row) return undefined;
+      if(field==='startDate'){
+        return row.startDate;
+      }
+      return row[field];
+    }
+
+    function normalizeValue(value){
+      if(value===undefined || value===null) return -Infinity;
+      if(typeof value==='number') return value;
+      const asNumber=Number(value);
+      if(!Number.isNaN(asNumber) && value!=='' && value!==null) return asNumber;
+      const time=Date.parse(value);
+      if(!Number.isNaN(time)) return time;
+      return String(value);
+    }
+
+    function formatTimestamp(value){
+      if(!value) return '-';
+      return value.replace(/^\\d{4}-/,'').replace('T',' ').substring(0,19);
+    }
+
+    function formatNumber(value,unit='',decimals=null){
+      if(value===undefined || value===null || value==='') return '-';
+      const num=Number(value);
+      const places=Number.isInteger(decimals)?decimals:(unit?1:3);
+      const formatted=Number.isFinite(num)?num.toFixed(places):value;
+      return unit?`${formatted} ${unit}`:formatted;
+    }
+
+    function updateSortIndicators(){
+      sortButtons.forEach(btn=>{
+        const indicator=btn.querySelector('.sort-indicator');
+        if(btn.dataset.field===currentSort.field){
+          indicator.textContent=currentSort.direction==='asc'?'↑':'↓';
+        }else{
+          indicator.textContent='↕';
+        }
+      });
+    }
+
+    function downloadCsv(){
+      if(!tableRows.length) return;
+      const columns=['startDate','temperature','gravity','gravityVelocity'];
+      const header=columns.join(';');
+      const lines=tableRows.map(row=>columns.map(col=>escapeCsv(resolveFieldValue(row,col))).join(';'));
+      const csv=[header,...lines].join('\\r\\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');
+      link.href=url;
+      link.download=`rapt-tabelle-${new Date().toISOString().slice(0,19)}.csv`;
+      link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+    }
+
+    function escapeCsv(value){
+      if(value===undefined || value===null) return '';
+      const str=String(value);
+      if(/[\";\\n]/.test(str)){
+        return `"${str.replace(/\"/g,'""')}"`;
+      }
+      return str;
+    }
+
+    function initStartOverrideControl(){
+      const stored=readPersistedStartOverride();
+      if(stored && startOverrideInput){
+        startOverrideInput.value=isoToLocalInputValue(stored);
+      }
+      if(startOverrideApply){
+        startOverrideApply.addEventListener('click',handleStartOverrideApply);
+      }
+      if(startOverrideClear){
+        startOverrideClear.addEventListener('click',handleStartOverrideReset);
+      }
+      fetchServerStartOverride().then(serverValue=>{
+        if(serverValue){
+          serverPersistedStart=serverValue;
+          if(startOverrideInput && !startOverrideInput.value){
+            startOverrideInput.value=isoToLocalInputValue(serverValue);
+          }
+          persistStartOverride(serverValue);
+        }else{
+          serverPersistedStart=null;
+        }
+      }).catch(()=>{});
+    }
+
+    function handleStartOverrideApply(){
+      const iso=getStartOverrideIso();
+      if(!iso){
+        if(startOverrideInput){
+          startOverrideInput.value='';
+        }
+        persistStartOverride(null);
+        clearStartOverrideOnServer();
+        return;
+      }
+      persistStartOverride(iso);
+      persistStartOverrideOnServer(iso).finally(()=>loadTelemetry());
+    }
+
+    function handleStartOverrideReset(){
+      if(startOverrideInput){
+        startOverrideInput.value='';
+      }
+      persistStartOverride(null);
+      serverPersistedStart=null;
+      clearStartOverrideOnServer().finally(()=>loadTelemetry());
+    }
+
+    function getStartOverrideIso(){
+      if(!startOverrideInput) return null;
+      const value=startOverrideInput.value?.trim();
+      if(!value) return null;
+      return localInputValueToIso(value);
+    }
+
+    function localInputValueToIso(value){
+      if(!value) return null;
+      const parsed=new Date(value);
+      if(Number.isNaN(parsed.getTime())) return null;
+      return parsed.toISOString();
+    }
+
+    function isoToLocalInputValue(value){
+      if(!value) return '';
+      const parsed=new Date(value);
+      if(Number.isNaN(parsed.getTime())) return '';
+      const year=parsed.getFullYear();
+      const month=String(parsed.getMonth()+1).padStart(2,'0');
+      const day=String(parsed.getDate()).padStart(2,'0');
+      const hours=String(parsed.getHours()).padStart(2,'0');
+      const minutes=String(parsed.getMinutes()).padStart(2,'0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function readPersistedStartOverride(){
+      try{
+        return window.localStorage?window.localStorage.getItem(START_OVERRIDE_STORAGE_KEY):null;
+      }catch(error){
+        return null;
+      }
+    }
+
+    function persistStartOverride(value){
+      try{
+        if(!window.localStorage) return;
+        if(value){
+          window.localStorage.setItem(START_OVERRIDE_STORAGE_KEY,value);
+        }else{
+          window.localStorage.removeItem(START_OVERRIDE_STORAGE_KEY);
+        }
+      }catch(error){
+        // ignore storage errors
+      }
+    }
+
+    function buildTelemetryUrl(startOverrideIso){
+      const base=getApiUrl('/api/rapt/telemetry');
+      const url=createTelemetryUrl(base);
+      if(startOverrideIso){
+        url.searchParams.set('start',startOverrideIso);
+      }
+      return url.toString();
+    }
+
+    function createTelemetryUrl(base){
+      if(base.startsWith('http://') || base.startsWith('https://')){
+        return new URL(base);
+      }
+      return new URL(base,window.location.origin);
+    }
+
+    function syncStartOverrideInput(serverValue,currentRequestValue){
+      if(!startOverrideInput) return;
+      if(currentRequestValue){
+        return;
+      }
+      if(serverValue){
+        startOverrideInput.value=isoToLocalInputValue(serverValue);
+        persistStartOverride(serverValue);
+      }else{
+        startOverrideInput.value='';
+        persistStartOverride(null);
+      }
+    }
+
+    async function fetchServerStartOverride(){
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'));
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok) return null;
+        return typeof data.startDate==='string'?data.startDate:null;
+      }catch(error){
+        return null;
+      }
+    }
+
+    async function persistStartOverrideOnServer(value){
+      if(!value) return;
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'),{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({startDate:value})
+        });
+        const data=await response.json().catch(()=>({}));
+        if(response.ok){
+          serverPersistedStart=typeof data.startDate==='string'?data.startDate:value;
+        }
+      }catch(error){
+        // ignore
+      }
+    }
+
+    async function clearStartOverrideOnServer(){
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'),{method:'DELETE'});
+        if(response.ok){
+          serverPersistedStart=null;
+        }
+      }catch(error){
+        // ignore
+      }
+    }
+  </script>
+</body>
+</html>
