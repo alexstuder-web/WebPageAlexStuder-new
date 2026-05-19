@@ -3,14 +3,16 @@
 <head>
   <meta charset="utf-8">
   <title>RAPT Dashboard — umgezogen</title>
-  <meta http-equiv="refresh" content="0; url=https://rapt.alexstuder.cloud/">
+  <script src="../../js/app-router.js"></script>
   <script>
-    var h = location.hostname.replace(/^(www\.)?/, 'rapt.');
-    location.replace('https://' + h + '/');
+    // Leitet auf den RAPT-Container weiter — Hostname-abhängig (lokal vs. VPS).
+    const target = window.appUrl('rapt');
+    if (target) location.replace(target);
   </script>
 </head>
 <body>
-  <p>Das RAPT Dashboard ist umgezogen auf
-     <a href="https://rapt.alexstuder.cloud/">rapt.alexstuder.cloud</a>.</p>
+  <p>Das RAPT Dashboard läuft jetzt als eigene App.
+     Falls die Weiterleitung nicht funktioniert:
+     <a href="/" id="back">zurück zur Hauptseite</a>.</p>
 </body>
 </html>
