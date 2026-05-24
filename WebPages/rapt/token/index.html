@@ -26,6 +26,14 @@
     .token-copy-row input {flex:1;min-width:220px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#020b1d;padding:12px;color:#f8fafc;font-family:monospace;font-size:13px;}
     .token-copy-row input:focus {outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
     .token-copy-feedback {font-size:12px;color:#86efac;min-height:16px;}
+    .token-tree-root{margin-top:8px;}
+    .token-tree-root details{background:#060b17;border:1px solid rgba(148,163,184,0.2);border-radius:18px;padding:18px;margin:12px 0;}
+    .token-tree-root details summary{font-weight:600;color:#bae6fd;list-style:none;}
+    .token-tree-root details summary::-webkit-details-marker{display:none;}
+    .token-tree-root details summary::before{content:'▸';display:inline-block;margin-right:8px;color:#94a3b8;transition:transform .2s ease;}
+    .token-tree-root details[open] summary::before{transform:rotate(90deg);}
+    .token-tree-root details details{margin:14px 0 0;}
+    .token-leaf{margin:4px 0;font-size:13px;color:#cbd5f5;}
   </style>
 </head>
 <body data-page="rapt">
@@ -80,24 +88,24 @@
     loadToken();
 
     async function loadToken(){
-      tokenStatus.textContent='⏳ Token wird abgerufen ...';
+      tokenStatus.textContent='Laden… Token wird abgerufen ...';
       tokenData.textContent='';
       setAccessToken('');
       try{
         const response=await fetch(getApiUrl('/api/rapt/token'),{method:'POST'});
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
-          tokenStatus.textContent=`❗ HTTP ${response.status}`;
+          tokenStatus.textContent=`Fehler: HTTP ${response.status}`;
           tokenData.textContent=JSON.stringify(data,null,2);
           return '';
         }
-        tokenStatus.textContent='✅ Token erfolgreich geladen';
+        tokenStatus.textContent='OK: Token erfolgreich geladen';
         const token=extractAccessToken(data);
         setAccessToken(token);
         tokenData.innerHTML=`<div class="token-tree-root">${renderNodes(data,'token')}</div>`;
         return token;
       }catch(error){
-        tokenStatus.textContent='❗ Token-Abruf fehlgeschlagen';
+        tokenStatus.textContent='Fehler: Token-Abruf fehlgeschlagen';
         tokenData.textContent=error.message;
         return '';
       }
@@ -129,9 +137,9 @@
       if(!value) return;
       try{
         await copyText(value);
-        tokenCopyFeedback.textContent='✅ Token in die Zwischenablage kopiert.';
+        tokenCopyFeedback.textContent='OK: Token in die Zwischenablage kopiert.';
       }catch(err){
-        tokenCopyFeedback.textContent='❗ Konnte Token nicht kopieren.';
+        tokenCopyFeedback.textContent='Fehler: Konnte Token nicht kopieren.';
         return;
       }
       setTimeout(()=>tokenCopyFeedback.textContent='',2500);
@@ -145,11 +153,11 @@
         const token=await loadToken();
         const activeToken=token || tokenValueInput.value.trim();
         if(!activeToken){
-          tokenStatus.textContent='❗ Konnte keinen Token abrufen.';
+          tokenStatus.textContent='Fehler: Konnte keinen Token abrufen.';
           return;
         }
         await copyText(activeToken);
-        tokenStatus.textContent='✅ Token kopiert. API wird geöffnet ...';
+        tokenStatus.textContent='OK: Token kopiert. API wird geöffnet ...';
         window.open('https://api.rapt.io/','_blank','noopener');
       }finally{
         openApiBtn.disabled=false;
@@ -199,11 +207,3 @@
   </script>
 </body>
 </html>
-    .token-tree-root{margin-top:8px;}
-    .token-tree-root details{background:#060b17;border:1px solid rgba(148,163,184,0.2);border-radius:18px;padding:18px;margin:12px 0;}
-    .token-tree-root details summary{font-weight:600;color:#bae6fd;list-style:none;}
-    .token-tree-root details summary::-webkit-details-marker{display:none;}
-    .token-tree-root details summary::before{content:'▸';display:inline-block;margin-right:8px;color:#94a3b8;transition:transform .2s ease;}
-    .token-tree-root details[open] summary::before{transform:rotate(90deg);}
-    .token-tree-root details details{margin:14px 0 0;}
-    .token-leaf{margin:4px 0;font-size:13px;color:#cbd5f5;}

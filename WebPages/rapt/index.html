@@ -85,8 +85,8 @@
 
     .btn.icon {
       padding: 0;
-      width: 42px;
-      height: 42px;
+      width: 48px;
+      height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -455,8 +455,7 @@
           <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
             <div id="battery-indicator"
               style="display:none; align-items:center; gap:4px; padding:4px 8px; border-radius:12px; border:1px solid transparent; font-size:12px; font-weight:bold;">
-              <span>Pill Batterie</span>
-              <span>🔋</span>
+              <span>Batt.</span>
               <span id="battery-value"></span>
             </div>
             <a href="https://alexstuder.ch/brew_app/" target="_blank" rel="noopener">
@@ -545,7 +544,7 @@
     </footer>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../../js/vendor/chart.min.js"></script>
   <script src="../../js/api-base.js"></script>
   <script>
     Chart.register({
@@ -666,7 +665,7 @@
     loadCachedData();
 
     async function loadCachedData(force = false) {
-      telemetryStatus.textContent = force ? '♻️ Cache wird neu geladen ...' : '⏳ Lade gespeicherte Daten ...';
+      telemetryStatus.textContent = force ? 'Aktualisiert: Cache wird neu geladen ...' : 'Laden… Gespeicherte Daten ...';
       telemetryRange.textContent = 'Zeitraum wird geladen ...';
       setLoadingState(true);
       try {
@@ -788,7 +787,7 @@
       const fallbackStart = getDefaultStartForCurrentController(rows);
       syncStartOverrideInputValue(fallbackStart);
       const generatedLabel = formatStatusTimestamp(cachedTelemetryData.generatedAt);
-      telemetryStatus.textContent = `💾 Cache · ${rows.length} Messpunkte · Stand ${generatedLabel || '–'}`;
+      telemetryStatus.textContent = `Cache · ${rows.length} Messpunkte · Stand ${generatedLabel || '–'}`;
       const start = cachedTelemetryData.startDate || rows[0]?.startDate || '';
       const end = cachedTelemetryData.endDate || cachedTelemetryData.generatedAt || rows[rows.length - 1]?.startDate || '';
 
@@ -855,13 +854,13 @@
     async function refreshCachesFromServer(startIso) {
       const currentController = controllerDataMap.get(currentControllerId) || null;
       if (currentController && !controllerHasActiveSession(currentController)) {
-        telemetryStatus.textContent = '🔴 Keine aktive Session – zeige gespeicherte Telemetrie.';
+        telemetryStatus.textContent = 'Offline: Keine aktive Session – zeige gespeicherte Telemetrie.';
         updateRangeInfo(cachedTelemetryData?.startDate || null, cachedTelemetryData?.endDate || null, false);
         updateReloadInfo(cachedTelemetryData?.generatedAt || null, false);
         setLoadingState(false);
         return;
       }
-      telemetryStatus.textContent = '⏳ Lade Live-Daten ...';
+      telemetryStatus.textContent = 'Laden… Live-Daten ...';
       telemetryRange.textContent = 'Zeitraum wird geladen ...';
       setLoadingState(true);
       try {
@@ -873,14 +872,14 @@
         }
         const response = await fetch(url.toString());
         if (!response.ok) {
-          telemetryStatus.textContent = `❗ Live HTTP ${response.status}`;
+          telemetryStatus.textContent = `Fehler: Live HTTP ${response.status}`;
           setLoadingState(false);
           return;
         }
         await response.json().catch(() => ({}));
         await loadCachedData(true);
       } catch (error) {
-        telemetryStatus.textContent = '❗ Live-Aktualisierung fehlgeschlagen';
+        telemetryStatus.textContent = 'Fehler: Live-Aktualisierung fehlgeschlagen';
         console.error('refreshCachesFromServer', error);
         setLoadingState(false);
       }
@@ -1190,7 +1189,7 @@
         {
           label: 'Gärgeschw. (Punkte/Tag)',
           data: velocityData,
-          borderColor: '#a16207',
+          borderColor: '#ca8a04',
           backgroundColor: 'rgba(161, 98, 7, 0.1)',
           yAxisID: 'yVelocity',
           fill: false,
@@ -1272,8 +1271,8 @@
               min: 0,
               max: velocityMaxScale,
               grid: { drawOnChartArea: false },
-              ticks: { color: '#a16207', padding: 8 },
-              title: { display: true, text: 'Punkte/Tag', color: '#a16207' },
+              ticks: { color: '#ca8a04', padding: 8 },
+              title: { display: true, text: 'Punkte/Tag', color: '#ca8a04' },
               display: true
             },
             yAbv: {

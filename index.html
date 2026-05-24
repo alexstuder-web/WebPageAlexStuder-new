@@ -6,17 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Start</title>
   <link rel="stylesheet" href="css/styles.css?v=4" />
-  <style>
-    .photo:hover {
-      filter: brightness(1.2);
-      outline: 3px solid #3b82f6;
-      box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-    }
-  </style>
 </head>
 
 <body data-page="index">
-  <div class="stage">
+  <main class="stage">
     <div class="preview left" id="prevL">
       <div class="img" id="prevLImg"></div>
     </div>
@@ -30,7 +23,7 @@
       </div>
     </div>
 
-    <div class="menu">
+    <nav aria-label="Hauptnavigation" class="menu">
       <a data-app="assistent" target="_blank" rel="noopener">
         <img src="img/brew/aibrewgenius-icon.png" alt="AiBrewGenius"
           style="width:90px;height:90px;margin-bottom:12px;border-radius:18px;" />
@@ -44,8 +37,8 @@
       <a class="btn" href="WebPages/rapt/">RAPT API Explorer</a>
       <a class="btn" data-app="studio" target="_blank" rel="noopener">Studio</a>
       <a class="btn" href="WebPages/sudoku/">Sudoku</a>
-    </div>
-  </div>
+    </nav>
+  </main>
   <script src="js/app-router.js"></script>
   <script>
     // initGallery referenziert window.appUrl, deshalb hier nach app-router.js

@@ -107,13 +107,13 @@
     loadTelemetry();
 
     async function loadTelemetry(){
-      tableStatus.textContent='⏳ Telemetrie wird geladen ...';
+      tableStatus.textContent='Laden… Telemetrie wird geladen ...';
       try{
         const startOverrideIso=getStartOverrideIso();
         const response=await fetch(buildTelemetryUrl(startOverrideIso));
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
-          tableStatus.textContent=`❗ HTTP ${response.status}`;
+          tableStatus.textContent=`Fehler: HTTP ${response.status}`;
           applyRows([]);
           return;
         }
@@ -128,10 +128,10 @@
         syncStartOverrideInput(persistedOverride,startOverrideIso);
         if(!rows.length){
           tableStatus.textContent=errorRows.length
-            ? `⚠️ Keine gültigen Telemetriedaten ( ${errorRows.length} ohne Startdatum ).`
+            ? `Hinweis: Keine gültigen Telemetriedaten ( ${errorRows.length} ohne Startdatum ).`
             : 'Keine Telemetriedaten vorhanden.';
         }else{
-          let status=`✅ ${rows.length} Einträge · Stand ${data.generatedAt || ''}`;
+          let status=`OK: ${rows.length} Einträge · Stand ${data.generatedAt || ''}`;
           if(errorRows.length){
             status+=` · ${errorRows.length} ohne Startdatum ignoriert`;
           }
@@ -142,7 +142,7 @@
         }
         applyRows(rows);
       }catch(error){
-        tableStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
+        tableStatus.textContent='Fehler: Telemetrie-Abruf fehlgeschlagen';
         applyRows([]);
       }
     }

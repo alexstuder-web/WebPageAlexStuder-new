@@ -6,7 +6,7 @@
 
 /* Grundlayout */
 html,body{height:100%;margin:0;overflow:hidden;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg)}
-body{display:grid;place-items:center;position:relative;transition:background .4s ease}
+body{display:grid;place-items:center;position:relative;transition:background .25s ease}
 
 /* Dynamischer Hintergrund: nur Pseudo-Element bewegt sich */
 body::before{
@@ -64,6 +64,7 @@ body[data-page="bier"]::before{
   border-radius:14px;background:#333 center/cover no-repeat;
   box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer
 }
+.photo:hover{filter:brightness(1.2);outline:3px solid #3b82f6;box-shadow:0 0 20px rgba(59,130,246,0.5)}
 
 .preview{position:absolute;top:0;bottom:0;width:50%;pointer-events:none;opacity:0;transition:opacity .25s ease;z-index:3;transform-style:preserve-3d}
 .preview.show{opacity:1}
@@ -77,8 +78,8 @@ body[data-page="bier"]::before{
 .preview.left .img{left:4vw;transform:translateY(-50%) rotateY(28deg) rotateX(2deg) translateZ(-240px) scale(0.96)}
 .preview.right .img{right:4vw;transform:translateY(-50%) rotateY(-28deg) rotateX(2deg) translateZ(-240px) scale(0.96)}
 
-.menu{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:20}
-.btn{padding:10px 16px;border:0;border-radius:12px;background:#1f2937;color:var(--fg);cursor:pointer;text-decoration:none}
+.menu{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:10px;z-index:20}
+.btn{padding:12px 16px;border:0;border-radius:12px;background:#1f2937;color:var(--fg);cursor:pointer;text-decoration:none}
 .btn:hover{background:#2b3444}
 
 /* QUIZ */
@@ -140,7 +141,7 @@ main.todo{padding:22px;display:grid;gap:16px;place-items:center}
 .sudoku-cell:nth-child(n+73){border-bottom-width:2px}
 .sudoku-cell[data-row="3"],.sudoku-cell[data-row="6"]{border-top-width:2px}
 .sudoku-cell[data-col="3"],.sudoku-cell[data-col="6"]{border-left-width:2px}
-.sudoku-cell:focus{outline:none}
+.sudoku-cell:focus{outline:2px solid #3b82f6;outline-offset:-2px}
 .sudoku-cell.active{background:#153047;border-color:#1f4c6b}
 .sudoku-cell.locked{background:#131c2a;color:#8ba3c9;cursor:default}
 .sudoku-cell.error{background:#3a1d1d;border-color:#c24040}
@@ -245,6 +246,7 @@ main.todo{padding:22px;display:grid;gap:16px;place-items:center}
     animation-iteration-count:1 !important;
     transition-duration:0.01ms !important;
   }
+  body::before{animation:none;}
 }
 
 /* GPT LANDING */
@@ -261,7 +263,7 @@ main.todo{padding:22px;display:grid;gap:16px;place-items:center}
 .gpt-icon{font-size:42px;line-height:1}
 .gpt-foot{display:flex;justify-content:flex-end}
 .gpt-foot .btn{min-width:160px;text-align:center}
-.btn.primary{background:#2563eb;color:#e8eaed;border:1px solid transparent}
+.btn.primary{background:#2563eb;color:#ffffff;border:1px solid transparent}
 .btn.primary:hover{background:#1d4ed8}
 @media (max-width:600px){
   .gpt-shell{padding:22px}

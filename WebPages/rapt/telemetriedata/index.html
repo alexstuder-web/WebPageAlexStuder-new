@@ -66,16 +66,16 @@
     async function loadTelemetryData(){
       telemetryWarning.style.display='none';
       telemetryWarning.textContent='';
-      telemetryStatus.textContent='🔄 RAPT Token wird angefordert ...';
+      telemetryStatus.textContent='Laden… RAPT Token wird angefordert ...';
       telemetryData.textContent='';
       refreshBtn.disabled=true;
       try{
         const token=await requestRaptToken();
         if(!token){
-          telemetryStatus.textContent='❗ Kein Token erhalten.';
+          telemetryStatus.textContent='Fehler: Kein Token erhalten.';
           return;
         }
-        telemetryStatus.textContent='🔄 Lade Temperature Controllers ...';
+        telemetryStatus.textContent='Laden… Temperature Controllers ...';
         const sections=[];
         const controllers=await requestTemperatureControllers();
         const controllerList=renderNodes(controllers,'TemperatureControllers');
@@ -104,10 +104,10 @@
         sections.push(`<section><h2 class="section-title">Hydrometers</h2>${hydrometerList}${hydrometerDetailBlocks.join('')}</section>`);
 
         const count=Array.isArray(controllers)?controllers.length:0;
-        telemetryStatus.textContent=`✅ ${count} Temperature Controller geladen.`;
+        telemetryStatus.textContent=`OK: ${count} Temperature Controller geladen.`;
         telemetryData.innerHTML=sections.join('<hr class="telemetry-sep" />');
       }catch(error){
-        telemetryStatus.textContent='❗ Abruf fehlgeschlagen';
+        telemetryStatus.textContent='Fehler: Abruf fehlgeschlagen';
         telemetryData.textContent=error.message || 'Unbekannter Fehler.';
       }finally{
         refreshBtn.disabled=false;
