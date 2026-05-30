@@ -6,7 +6,7 @@
 
 (function () {
   const APPS = {
-    assistent: { port: 8081,  subdomain: 'assistent', exposeOnVps: true  },
+    assistent: { port: 8081,  subdomain: 'aibrewgenius', exposeOnVps: true  },
     rapt:      { port: 8082,  subdomain: 'rapt',      exposeOnVps: true  },
     studio:    { port: 54323, subdomain: null,        exposeOnVps: false },
   };
