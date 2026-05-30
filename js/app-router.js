@@ -16,8 +16,16 @@
     return h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0';
   }
 
+  // Site-Apex bestimmen (z.B. "alexstuder.cloud"), egal auf welcher Subdomain
+  // wir uns befinden. Wichtig: AUCH wenn wir BEREITS auf dem Apex sind, muss
+  // hier der Apex zurückkommen — die alte Regex-Variante (replace /^[^.]+\./)
+  // stripte sonst das Hauptlabel "alexstuder" weg und erzeugte z.B.
+  // https://rapt.cloud/ statt https://rapt.alexstuder.cloud/.
+  // Robust für 2-Label-TLDs (.cloud/.ch/.com). Nicht-anwendbar auf .co.uk &
+  // ähnliche eTLD+2 — wir nutzen die hier nicht.
   function baseDomain() {
-    return location.hostname.replace(/^(www\.)?[^.]+\./, '');
+    const parts = location.hostname.split('.');
+    return parts.slice(-2).join('.');
   }
 
   // Liefert URL der gewünschten App, oder null falls in dieser Umgebung
